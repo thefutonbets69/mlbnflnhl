@@ -115,6 +115,8 @@ class OddsPapi:
             r = self.s.get(f"{API}/{path}", params=params, timeout=30)
             self.last = time.time()
             self.calls += 1
+        if r.status_code == 404 and "FIXTURE_NOT_FOUND" in r.text:
+            return []  # no games scheduled (e.g. offseason) is not an error
         if not r.ok:
             raise RuntimeError(f"HTTP {r.status_code} on /{path} params={ {k: v for k, v in params.items() if k != 'apiKey'} }: {r.text[:400]}")
         return r.json()
