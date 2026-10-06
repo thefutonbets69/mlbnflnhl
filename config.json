@@ -1,0 +1,49 @@
+{
+  "threshold_pts": 1.5,
+  "poll_minutes": 15,
+  "max_requests_per_day": 400,
+  "participant1_is_home": true,
+  "bookmakers": {
+    "betmgm": "BetMGM",
+    "draftkings": "DraftKings",
+    "fanduel": "FanDuel"
+  },
+  "leagues": {
+    "MLB": {
+      "enabled": true,
+      "sportId": 13,
+      "tournamentIds": [
+        109
+      ],
+      "marketId": 133,
+      "outcomeIds": [
+        "133",
+        "135"
+      ]
+    },
+    "NHL": {
+      "enabled": true,
+      "sportId": 15,
+      "tournamentIds": [
+        234
+      ],
+      "marketId": 151,
+      "outcomeIds": [
+        "151",
+        "152"
+      ]
+    },
+    "NBA": {
+      "enabled": true,
+      "sportId": 11,
+      "tournamentIds": [
+        132
+      ],
+      "marketId": 111,
+      "outcomeIds": [
+        "111",
+        "112"
+      ]
+    }
+  }
+}
