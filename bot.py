@@ -284,9 +284,17 @@ def run_cycle(api, cfg, state, send, now=None, verbose=False):
         fixtures = league_fixtures(api, league, lc, state, now)
         if not fixtures:
             continue
-        odds = api.get("odds-by-tournaments",
-                       tournamentIds=",".join(str(t) for t in lc["tournamentIds"]),
-                       bookmakers=",".join(books))
+        # OddsPapi accepts exactly one bookmaker per call on this plan:
+        # fetch each book separately and merge them per fixture.
+        merged = {}
+        for slug in books:
+            for fx_ in api.get("odds-by-tournaments",
+                               tournamentIds=",".join(str(t) for t in lc["tournamentIds"]),
+                               bookmaker=slug):
+                m = merged.setdefault(str(fx_.get("fixtureId")), fx_)
+                if m is not fx_:
+                    m.setdefault("bookmakerOdds", {}).update(fx_.get("bookmakerOdds") or {})
+        odds = list(merged.values())
         for fx in odds:
             meta = fixtures.get(str(fx.get("fixtureId")))
             if not meta:  # already started, or outside the 47-hour window
