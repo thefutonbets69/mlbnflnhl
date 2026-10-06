@@ -1,0 +1,65 @@
+name: line-movement-alerts
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"   # every 15 minutes (GitHub may run a few minutes late)
+  workflow_dispatch:          # lets you press "Run workflow" by hand
+
+permissions:
+  contents: write             # only used to save config.json after first-time discovery
+
+concurrency:
+  group: line-movement-alerts
+  cancel-in-progress: false
+
+jobs:
+  alerts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      ODDSPAPI_KEY: ${{ secrets.ODDSPAPI_KEY }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+    steps:
+      - name: Stop early if the secrets are not added yet
+        id: guard
+        run: |
+          if [ -z "$ODDSPAPI_KEY" ] || [ -z "$TELEGRAM_BOT_TOKEN" ] || [ -z "$TELEGRAM_CHAT_ID" ]; then
+            echo "::warning::Add ODDSPAPI_KEY, TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID under Settings > Secrets and variables > Actions, then run again."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.guard.outputs.ready == 'true'
+      - uses: actions/setup-python@v5
+        if: steps.guard.outputs.ready == 'true'
+        with:
+          python-version: "3.12"
+      - run: pip install requests
+        if: steps.guard.outputs.ready == 'true'
+
+      - name: First run only - find league and market IDs
+        if: steps.guard.outputs.ready == 'true'
+        run: |
+          if [ ! -f config.json ]; then
+            python bot.py --discover
+            git config user.name "alert-bot"
+            git config user.email "alert-bot@users.noreply.github.com"
+            git add config.json
+            git commit -m "Add discovered config.json"
+            git push
+          fi
+
+      - name: Restore saved prices (opening lines, last alerts)
+        if: steps.guard.outputs.ready == 'true'
+        uses: actions/cache@v4
+        with:
+          path: state.json
+          key: state-${{ github.run_id }}
+          restore-keys: state-
+
+      - name: Check lines and post alerts
+        if: steps.guard.outputs.ready == 'true'
+        run: python bot.py --once
